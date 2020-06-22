@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+from __future__ import print_function
 import ast
 import astor
 from collections import defaultdict
@@ -40,7 +42,8 @@ def walk_dir_for_ext(root, ext):
     """walk through the directory starting from root and yield all file path having an extension of ext"""
     for path in root.iterdir():
         if path.is_dir():
-            yield from walk_dir_for_ext(path, ext)
+            for file_in_sub_path in walk_dir_for_ext(path, ext):
+                yield file_in_sub_path
         if path.is_file() and path.suffix == ext:  # avoid broken symlink
             yield path
 
@@ -48,7 +51,7 @@ def walk_dir_for_ext(root, ext):
 def get_lib_name_from_repo_name(repo_name):
     # type: (str) -> str
     """repo_name is in the format of library_user#repo"""
-    lib, _ = repo_name.split('_', maxsplit=1)
+    lib, _ = repo_name.split('_', 1)
     return lib
 
 
