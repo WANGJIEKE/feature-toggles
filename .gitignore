@@ -2,6 +2,5 @@
 .DS_Store
 .python-version
 settings.json
-repo_stats
-test.py
-log.txt
+repo_stats*
+log*

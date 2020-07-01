@@ -63,9 +63,10 @@ def get_rel_path(p, root):
     return os.path.relpath(str(p), start=str(root))
 
 
-def find_func_usage_ast(path, root, funcs):
+def find_func_usage_ast(path, root, toggles):
     # type: (Path, Path, Iterable[str]) -> Dict[str, List[Tuple[str, int str]]]
-    """build the ast from the file, and find all ast.Call nodes; same returned structure as above function
+    """build the ast from the file, and find all ast.Call nodes
+    the structure of returned dict is {'toggle_name': [('file_rel_path', line_number, line_content), ...]}
     """
     d = defaultdict(list)
     rel_path = get_rel_path(path, root)
@@ -73,20 +74,35 @@ def find_func_usage_ast(path, root, funcs):
         with path.open() as f:
             source = f.read()
             tree = ast.parse(source, filename=rel_path)
-            call_nodes = filter(lambda n: type(n) is ast.Call, ast.walk(tree))
+            toggle_nodes = filter(lambda n: isinstance(n, (ast.Call, ast.ClassDef)), ast.walk(tree))
 
-            for call in call_nodes:
-                if type(call.func) is ast.Name:
-                    if call.func.id in funcs:
-                        d[call.func.id].append((rel_path, call.lineno, repr(astor.to_source(call))))
-                elif type(call.func) is ast.Attribute:
-                    if call.func.attr in funcs:
-                        d[call.func.attr].append((rel_path, call.lineno, repr(astor.to_source(call))))
-                else:
-                    print(f'unexpected type from call.func={call.func}', file=sys.stderr)
-                    print(f'\tsource={astor.to_source(call)}', file=sys.stderr)
-                    print(f'\tpath={rel_path}', file=sys.stderr)
-                    print(f'\tlineno={call.lineno}', file=sys.stderr)
+            for node in toggle_nodes:
+                if isinstance(node, ast.Call):
+                    if isinstance(node.func, ast.Name):
+                        if node.func.id in toggles:
+                            d[node.func.id].append((rel_path, node.lineno, repr(astor.to_source(node))))
+                    elif isinstance(node.func, ast.Attribute):
+                        if node.func.attr in toggles:
+                            d[node.func.attr].append((rel_path, node.lineno, repr(astor.to_source(node))))
+                    else:
+                        print(f'unexpected type from call.func={node.func}', file=sys.stderr)
+                        print(f'\tsource={astor.to_source(node)}', file=sys.stderr)
+                        print(f'\tpath={rel_path}', file=sys.stderr)
+                        print(f'\tlineno={node.lineno}', file=sys.stderr)
+                else:  # isinstance(node, ast.ClassDef)
+                    for base_class in node.bases:
+                        if isinstance(base_class, ast.Name):
+                            if base_class.id in toggles:
+                                d[base_class.id].append((rel_path, node.lineno, repr(astor.to_source(node))))
+                        elif isinstance(base_class, ast.Attribute):
+                            if base_class.attr in toggles:
+                                d[base_class.attr].append((rel_path, node.lineno, repr(astor.to_source(node))))
+                        else:
+                            print(f'unexpected type from call.func={base_class}', file=sys.stderr)
+                            print(f'\tsource={astor.to_source(node)}', file=sys.stderr)
+                            print(f'\tpath={rel_path}', file=sys.stderr)
+                            print(f'\tlineno={node.lineno}', file=sys.stderr)
+
     except Exception as e:
         print(f'Exception with type {type(e)} caught when reading file {rel_path}: {e}', file=sys.stderr)
     return d
