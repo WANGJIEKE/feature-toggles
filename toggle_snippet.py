@@ -64,7 +64,7 @@ def get_rel_path(p, root):
 
 
 def find_func_usage_ast(path, root, toggles):
-    # type: (Path, Path, Iterable[str]) -> Dict[str, List[Tuple[str, int str]]]
+    # type: (Path, Path, Iterable[str]) -> Dict[str, List[Tuple[str, int, str]]]
     """build the ast from the file, and find all ast.Call nodes
     the structure of returned dict is {'toggle_name': [('file_rel_path', line_number, line_content), ...]}
     """
@@ -138,7 +138,6 @@ def func_usage_dict_to_df(d):
 
 if __name__ == '__main__':
     import json
-    config = None
 
     with Path('./settings.json').open() as config_file:
         config = json.load(config_file)
